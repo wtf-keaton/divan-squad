@@ -61,10 +61,21 @@ bool c_visuals::draw( UWorld* world )
 
                 if ( vars::visuals::players::enable )
                 {
+                    //if ( actor->instigator == playercontroller->acknowledgedpawn ) continue;
                     if ( distance < vars::visuals::players::distance )
                     {
                         Vector2 screen_head{}, screen_root{};
-                        if ( vcruntime->wcsstr( actor_name, _( L"BP_Soldier_" ) ) )
+                        if ( 
+                            vcruntime->wcsstr( actor_name, _( L"BP_Soldier_RU_" ) ) 
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_USA_" ) ) 
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_AUS_" ) ) 
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_CAF_" ) ) 
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_GB_" ) ) 
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_INS_" ) ) 
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_MEA_" ) ) 
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_MIL_" ) ) 
+                            
+                            )
                         {
 
                             auto playerstate = actor->instigator->playerstate;
@@ -72,11 +83,12 @@ bool c_visuals::draw( UWorld* world )
                             if ( playerstate )
                             {
                                 if ( vars::visuals::players::disable_team && playerstate->teamId == localplayerstate->teamId ) continue;
+                                auto mesh = actor->instigator->controller->character->Mesh;
+                                if ( !mesh ) continue;
+                                //auto head = sdk::get_bone_with_rotation( mesh, bones::HEAD );
+                                //auto root = sdk::get_bone_with_rotation( mesh, bones::ROOT );
 
-                                auto head = sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::HEAD );
-                                auto root = sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::ROOT );
-
-                                if ( sdk::world_to_screen( playercontroller, head, &screen_head ) && sdk::world_to_screen( playercontroller, root, &screen_root ) )
+                                if ( sdk::world_to_screen( playercontroller, actor->rootcomponent->RelativeLocation, &screen_head )/* && sdk::world_to_screen( playercontroller, root, &screen_root ) */)
                                 {
                                     Vector2 box_size{};
                                     box_size.y = vcruntime->abs( screen_head.y - screen_root.y ); // calculate absolute len for box height
@@ -91,7 +103,7 @@ bool c_visuals::draw( UWorld* world )
                                         ImFormatString( buf, sizeof buf, _( "%s HP: %.0f [%dm]" ), vcruntime->w2c( sdk::get_player_name( ( uint64_t ) actor ) ), playerstate->Soldier->Health, distance );
                                         auto size = font->CalcTextSizeA( 16.f, 14, 0, buf );
 
-                                        render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( start_pos.x + ( box_size.x / 2 ) - ( size.x / 2 ), start_pos.y - 10 - size.y ), ImGui::GetColorU32(
+                                        render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_head.x, screen_head.y ), ImGui::GetColorU32(
                                             ImVec4(
                                                 vars::visuals::players::name_color[ 0 ],
                                                 vars::visuals::players::name_color[ 1 ],
@@ -102,7 +114,7 @@ bool c_visuals::draw( UWorld* world )
 
                                     if ( vars::visuals::players::snapline )
                                     {
-                                        ImGui::GetOverlayDrawList()->AddLine( ImVec2( ImGui::GetIO().DisplaySize.x / 2, ImGui::GetIO().DisplaySize.y ), ImVec2( screen_root.x, screen_root.y ),
+                                        ImGui::GetOverlayDrawList()->AddLine( ImVec2( ImGui::GetIO().DisplaySize.x / 2, ImGui::GetIO().DisplaySize.y ), ImVec2( screen_head.x, screen_head.y ),
                                             ImGui::GetColorU32(
                                                 ImVec4(
                                                     vars::visuals::players::snapline_color[ 0 ],
@@ -137,20 +149,21 @@ bool c_visuals::draw( UWorld* world )
                                         screen_upper_arm_right{}, screen_upper_arm_left{}, screen_lower_arm_right{}, screen_lower_arm_left{},
                                         screen_hand_right{}, screen_hand_left{};
 
-                                    if ( sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::NECK ), &screen_neck ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::PELVIS ), &screen_pelvis ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::RIGHT_THIGH ), &screen_right_thigh ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::LEFT_THIGH ), &screen_left_thigh ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::RIGHT_KNEE ), &screen_right_calf ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::LEFT_KNEE ), &screen_left_calf ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::RIGHT_FOOT ), &screen_right_foot ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::LEFT_FOOT ), &screen_left_foot ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::RIGHT_SHOULDER ), &screen_upper_arm_right ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::LEFT_SHOULDER ), &screen_upper_arm_left ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::RIGHT_ELBOW ), &screen_lower_arm_right ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::LEFT_ELBOW ), &screen_lower_arm_left ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::RIGHT_HAND ), &screen_hand_right ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::LEFT_HAND ), &screen_hand_left ) )
+                                    if ( 
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::NECK ), &screen_neck ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::PELVIS ), &screen_pelvis ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_THIGH ), &screen_right_thigh ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_THIGH ), &screen_left_thigh ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_KNEE ), &screen_right_calf ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_KNEE ), &screen_left_calf ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_FOOT ), &screen_right_foot ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_FOOT ), &screen_left_foot ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_SHOULDER ), &screen_upper_arm_right ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_SHOULDER ), &screen_upper_arm_left ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_ELBOW ), &screen_lower_arm_right ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_ELBOW ), &screen_lower_arm_left ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_HAND ), &screen_hand_right ) &&
+                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_HAND ), &screen_hand_left ) )
                                     {
                                         auto color =
                                             ImColor(

@@ -160,6 +160,7 @@ void menu::draw()
 				ImGui::BeginGroup();
 				ImGui::Checkbox( _( "Enable" ), &vars::misc::enable );
 				ImGui::Checkbox( _( "Speed hack" ), &vars::misc::speed_hack );
+				//ImGui::Checkbox( _( "Debug" ), &vars::misc::debug );
 				if ( vars::misc::speed_hack )
 					ImGui::SliderInt( _( "Speed" ), &vars::misc::speed_value, 0, 350 );
 			}
