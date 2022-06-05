@@ -49,10 +49,10 @@ bool c_visuals::draw( UWorld* world )
 
         if ( auto actor = actors[ i ] )
         {
-            auto root = actor->rootcomponent;
-            if ( root )
+            auto rootcomponent = actor->rootcomponent;
+            if ( rootcomponent )
             {
-                auto location = root->RelativeLocation;
+                auto location = rootcomponent->RelativeLocation;
                 auto distance_float = vcruntime->get_distance( localpos, location );
 
                 int distance = int( distance_float ) / 100;
@@ -61,133 +61,138 @@ bool c_visuals::draw( UWorld* world )
 
                 if ( vars::visuals::players::enable )
                 {
-                    //if ( actor->instigator == playercontroller->acknowledgedpawn ) continue;
+                    if ( actor->instigator == playercontroller->acknowledgedpawn ) continue;
                     if ( distance < vars::visuals::players::distance )
                     {
                         Vector2 screen_head{}, screen_root{};
-                        if ( 
-                            vcruntime->wcsstr( actor_name, _( L"BP_Soldier_RU_" ) ) 
-                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_USA_" ) ) 
-                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_AUS_" ) ) 
-                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_CAF_" ) ) 
-                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_GB_" ) ) 
-                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_INS_" ) ) 
-                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_MEA_" ) ) 
-                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_MIL_" ) ) 
-                            
+                        if (
+                            vcruntime->wcsstr( actor_name, _( L"BP_Soldier_RU_" ) )
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_USA_" ) )
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_AUS_" ) )
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_CAF_" ) )
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_GB_" ) )
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_INS_" ) )
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_MEA_" ) )
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_MIL_" ) )
+
                             )
                         {
+                            auto actor_pawn = actor->instigator;
+                            if ( !actor_pawn ) continue;
 
-                            auto playerstate = actor->instigator->playerstate;
+                            auto playerstate = actor_pawn->playerstate;
+                            if ( !playerstate ) continue;
 
-                            if ( playerstate )
+                            auto soldier = playerstate->Soldier;
+                            if ( !soldier ) continue;
+
+                            auto mesh = actor_pawn->Mesh;
+                            if ( !mesh ) continue;
+
+                            if ( vars::visuals::players::disable_team && playerstate->teamId == localplayerstate->teamId ) continue;
+
+                            auto head = sdk::get_bone_with_rotation( mesh, bones::HEAD );
+                            auto root = sdk::get_bone_with_rotation( mesh, bones::ROOT );
+
+                            if ( sdk::world_to_screen( playercontroller, head, &screen_head ) && sdk::world_to_screen( playercontroller, root, &screen_root ) )
                             {
-                                if ( vars::visuals::players::disable_team && playerstate->teamId == localplayerstate->teamId ) continue;
-                                auto mesh = actor->instigator->controller->character->Mesh;
-                                if ( !mesh ) continue;
-                                //auto head = sdk::get_bone_with_rotation( mesh, bones::HEAD );
-                                //auto root = sdk::get_bone_with_rotation( mesh, bones::ROOT );
+                                Vector2 box_size{};
+                                box_size.y = vcruntime->abs( screen_head.y - screen_root.y ); // calculate absolute len for box height
+                                box_size.x = box_size.y * 0.25f; // caclulate absolute len for box width
+                                auto start_pos = Vector2{ screen_head.x - box_size.x, screen_head.y };
+                                box_size.x = box_size.x * 2.0f;
+                                Vector2 dist_pos{ box_size.x + 15.f, screen_head.y };
 
-                                if ( sdk::world_to_screen( playercontroller, actor->rootcomponent->RelativeLocation, &screen_head )/* && sdk::world_to_screen( playercontroller, root, &screen_root ) */)
+                                if ( vars::visuals::players::names )
                                 {
-                                    Vector2 box_size{};
-                                    box_size.y = vcruntime->abs( screen_head.y - screen_root.y ); // calculate absolute len for box height
-                                    box_size.x = box_size.y * 0.25f; // caclulate absolute len for box width
-                                    auto start_pos = Vector2{ screen_head.x - box_size.x, screen_head.y };
-                                    box_size.x = box_size.x * 2.0f;
-                                    Vector2 dist_pos{ box_size.x + 15.f, screen_head.y };
+                                    char buf[ 1024 ];
+                                    ImFormatString( buf, sizeof buf, _( "%s HP: %d [%dm]" ), sdk::get_player_name( ( uint64_t ) actor ), soldier->Health, distance );
+                                    auto size = font->CalcTextSizeA( 16.f, 14, 0, buf );
 
-                                    if ( vars::visuals::players::names )
-                                    {
-                                        char buf[ 1024 ];
-                                        ImFormatString( buf, sizeof buf, _( "%s HP: %.0f [%dm]" ), vcruntime->w2c( sdk::get_player_name( ( uint64_t ) actor ) ), playerstate->Soldier->Health, distance );
-                                        auto size = font->CalcTextSizeA( 16.f, 14, 0, buf );
-
-                                        render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_head.x, screen_head.y ), ImGui::GetColorU32(
-                                            ImVec4(
-                                                vars::visuals::players::name_color[ 0 ],
-                                                vars::visuals::players::name_color[ 1 ],
-                                                vars::visuals::players::name_color[ 2 ],
-                                                1.f )
-                                        ), buf, font );
-                                    }
-
-                                    if ( vars::visuals::players::snapline )
-                                    {
-                                        ImGui::GetOverlayDrawList()->AddLine( ImVec2( ImGui::GetIO().DisplaySize.x / 2, ImGui::GetIO().DisplaySize.y ), ImVec2( screen_head.x, screen_head.y ),
-                                            ImGui::GetColorU32(
-                                                ImVec4(
-                                                    vars::visuals::players::snapline_color[ 0 ],
-                                                    vars::visuals::players::snapline_color[ 1 ],
-                                                    vars::visuals::players::snapline_color[ 2 ],
-                                                    1.f )
-                                            ), 1.5f );
-                                    }
-
-                                    if ( vars::visuals::players::box )
-                                    {
-                                        render->render_box( ImGui::GetOverlayDrawList(), start_pos.x, start_pos.y, box_size.x, box_size.y,
-                                            ImGui::GetColorU32(
-                                                ImVec4(
-                                                    vars::visuals::players::box_color[ 0 ],
-                                                    vars::visuals::players::box_color[ 1 ],
-                                                    vars::visuals::players::box_color[ 2 ],
-                                                    1.f ) ), 1 );
-
-                                        if ( vars::visuals::players::box_outline )
-                                        {
-                                            render->render_box( ImGui::GetOverlayDrawList(), start_pos.x + 1, start_pos.y + 1, box_size.x - 2, box_size.y - 2, ImColor( 0, 0, 0 ), 1 );
-                                            render->render_box( ImGui::GetOverlayDrawList(), start_pos.x - 1, start_pos.y - 1, box_size.x + 2, box_size.y + 2, ImColor( 0, 0, 0 ), 1 );
-                                        }
-                                    }
+                                    render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( start_pos.x + ( box_size.x / 2 ) - ( size.x ), start_pos.y - 10 - size.y ), ImGui::GetColorU32(
+                                        ImVec4(
+                                            vars::visuals::players::name_color[ 0 ],
+                                            vars::visuals::players::name_color[ 1 ],
+                                            vars::visuals::players::name_color[ 2 ],
+                                            1.f )
+                                    ), buf, font );
                                 }
 
-                                if ( vars::visuals::players::skelet )
+                                if ( vars::visuals::players::snapline )
                                 {
-                                    Vector2 screen_neck{}, screen_pelvis{},
-                                        screen_right_thigh{}, screen_left_thigh{}, screen_left_calf{}, screen_right_calf{}, screen_right_foot{}, screen_left_foot{},
-                                        screen_upper_arm_right{}, screen_upper_arm_left{}, screen_lower_arm_right{}, screen_lower_arm_left{},
-                                        screen_hand_right{}, screen_hand_left{};
+                                    ImGui::GetOverlayDrawList()->AddLine( ImVec2( ImGui::GetIO().DisplaySize.x / 2, ImGui::GetIO().DisplaySize.y ), ImVec2( screen_root.x, screen_root.y ),
+                                        ImGui::GetColorU32(
+                                            ImVec4(
+                                                vars::visuals::players::snapline_color[ 0 ],
+                                                vars::visuals::players::snapline_color[ 1 ],
+                                                vars::visuals::players::snapline_color[ 2 ],
+                                                1.f )
+                                        ), 1.5f );
+                                }
 
-                                    if ( 
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::NECK ), &screen_neck ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::PELVIS ), &screen_pelvis ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_THIGH ), &screen_right_thigh ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_THIGH ), &screen_left_thigh ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_KNEE ), &screen_right_calf ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_KNEE ), &screen_left_calf ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_FOOT ), &screen_right_foot ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_FOOT ), &screen_left_foot ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_SHOULDER ), &screen_upper_arm_right ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_SHOULDER ), &screen_upper_arm_left ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_ELBOW ), &screen_lower_arm_right ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_ELBOW ), &screen_lower_arm_left ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_HAND ), &screen_hand_right ) &&
-                                        sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_HAND ), &screen_hand_left ) )
+                                if ( vars::visuals::players::box )
+                                {
+                                    render->render_box( ImGui::GetOverlayDrawList(), start_pos.x, start_pos.y, box_size.x, box_size.y,
+                                        ImGui::GetColorU32(
+                                            ImVec4(
+                                                vars::visuals::players::box_color[ 0 ],
+                                                vars::visuals::players::box_color[ 1 ],
+                                                vars::visuals::players::box_color[ 2 ],
+                                                1.f ) ), 1 );
+
+                                    if ( vars::visuals::players::box_outline )
                                     {
-                                        auto color =
-                                            ImColor(
-                                                int( vars::visuals::players::skelet_color[ 0 ] * 255.f ),
-                                                int( vars::visuals::players::skelet_color[ 1 ] * 255.f ),
-                                                int( vars::visuals::players::skelet_color[ 2 ] * 255.f )
-                                            );// vars::visuals::players::skelet_color;
-
-                                        ImGui::GetOverlayDrawList()->AddLine( { screen_neck.x, screen_neck.y }, { screen_upper_arm_right.x, screen_upper_arm_right.y }, color, 1.f );
-                                        ImGui::GetOverlayDrawList()->AddLine( { screen_neck.x, screen_neck.y }, { screen_upper_arm_left.x, screen_upper_arm_left.y }, color, 1.f );
-                                        ImGui::GetOverlayDrawList()->AddLine( { screen_neck.x, screen_neck.y }, { screen_pelvis.x, screen_pelvis.y }, color, 1.f );
-
-                                        ImGui::GetOverlayDrawList()->AddLine( { screen_pelvis.x, screen_pelvis.y }, { screen_right_thigh.x, screen_right_thigh.y }, color, 1.f );
-                                        ImGui::GetOverlayDrawList()->AddLine( { screen_pelvis.x, screen_pelvis.y }, { screen_left_thigh.x, screen_left_thigh.y }, color, 1.f );
-
-                                        ImGui::GetOverlayDrawList()->AddLine( { screen_right_thigh.x, screen_right_thigh.y }, { screen_right_calf.x, screen_right_calf.y }, color, 1.f );
-                                        ImGui::GetOverlayDrawList()->AddLine( { screen_left_thigh.x, screen_left_thigh.y }, { screen_left_calf.x, screen_left_calf.y }, color, 1.f );
-
-                                        ImGui::GetOverlayDrawList()->AddLine( { screen_right_calf.x, screen_right_calf.y }, { screen_right_foot.x, screen_right_foot.y }, color, 1.f );
-                                        ImGui::GetOverlayDrawList()->AddLine( { screen_left_calf.x, screen_left_calf.y }, { screen_left_foot.x, screen_left_foot.y }, color, 1.f );
-
-                                        ImGui::GetOverlayDrawList()->AddLine( { screen_upper_arm_right.x, screen_upper_arm_right.y }, { screen_lower_arm_right.x, screen_lower_arm_right.y }, color, 1.f );
-                                        ImGui::GetOverlayDrawList()->AddLine( { screen_upper_arm_left.x, screen_upper_arm_left.y }, { screen_lower_arm_left.x, screen_lower_arm_left.y }, color, 1.f );
+                                        render->render_box( ImGui::GetOverlayDrawList(), start_pos.x + 1, start_pos.y + 1, box_size.x - 2, box_size.y - 2, ImColor( 0, 0, 0 ), 1 );
+                                        render->render_box( ImGui::GetOverlayDrawList(), start_pos.x - 1, start_pos.y - 1, box_size.x + 2, box_size.y + 2, ImColor( 0, 0, 0 ), 1 );
                                     }
+                                }
+                            }
+
+                            if ( vars::visuals::players::skelet )
+                            {
+                                Vector2 screen_neck{}, screen_pelvis{},
+                                    screen_right_thigh{}, screen_left_thigh{}, screen_left_calf{}, screen_right_calf{}, screen_right_foot{}, screen_left_foot{},
+                                    screen_upper_arm_right{}, screen_upper_arm_left{}, screen_lower_arm_right{}, screen_lower_arm_left{},
+                                    screen_hand_right{}, screen_hand_left{};
+
+                                if (
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::NECK ), &screen_neck ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::PELVIS ), &screen_pelvis ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_THIGH ), &screen_right_thigh ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_THIGH ), &screen_left_thigh ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_KNEE ), &screen_right_calf ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_KNEE ), &screen_left_calf ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_FOOT ), &screen_right_foot ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_FOOT ), &screen_left_foot ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_SHOULDER ), &screen_upper_arm_right ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_SHOULDER ), &screen_upper_arm_left ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_ELBOW ), &screen_lower_arm_right ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_ELBOW ), &screen_lower_arm_left ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::RIGHT_HAND ), &screen_hand_right ) &&
+                                    sdk::world_to_screen( playercontroller, sdk::get_bone_with_rotation( mesh, bones::LEFT_HAND ), &screen_hand_left ) )
+                                {
+                                    auto color =
+                                        ImColor(
+                                            int( vars::visuals::players::skelet_color[ 0 ] * 255.f ),
+                                            int( vars::visuals::players::skelet_color[ 1 ] * 255.f ),
+                                            int( vars::visuals::players::skelet_color[ 2 ] * 255.f )
+                                        );// vars::visuals::players::skelet_color;
+
+                                    ImGui::GetOverlayDrawList()->AddLine( { screen_neck.x, screen_neck.y }, { screen_upper_arm_right.x, screen_upper_arm_right.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList()->AddLine( { screen_neck.x, screen_neck.y }, { screen_upper_arm_left.x, screen_upper_arm_left.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList()->AddLine( { screen_neck.x, screen_neck.y }, { screen_pelvis.x, screen_pelvis.y }, color, 1.f );
+
+                                    ImGui::GetOverlayDrawList()->AddLine( { screen_pelvis.x, screen_pelvis.y }, { screen_right_thigh.x, screen_right_thigh.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList()->AddLine( { screen_pelvis.x, screen_pelvis.y }, { screen_left_thigh.x, screen_left_thigh.y }, color, 1.f );
+
+                                    ImGui::GetOverlayDrawList()->AddLine( { screen_right_thigh.x, screen_right_thigh.y }, { screen_right_calf.x, screen_right_calf.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList()->AddLine( { screen_left_thigh.x, screen_left_thigh.y }, { screen_left_calf.x, screen_left_calf.y }, color, 1.f );
+
+                                    ImGui::GetOverlayDrawList()->AddLine( { screen_right_calf.x, screen_right_calf.y }, { screen_right_foot.x, screen_right_foot.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList()->AddLine( { screen_left_calf.x, screen_left_calf.y }, { screen_left_foot.x, screen_left_foot.y }, color, 1.f );
+
+                                    ImGui::GetOverlayDrawList()->AddLine( { screen_upper_arm_right.x, screen_upper_arm_right.y }, { screen_lower_arm_right.x, screen_lower_arm_right.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList()->AddLine( { screen_upper_arm_left.x, screen_upper_arm_left.y }, { screen_lower_arm_left.x, screen_lower_arm_left.y }, color, 1.f );
                                 }
                             }
                         }

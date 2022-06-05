@@ -602,6 +602,8 @@ struct APawn
 	struct APlayerState* playerstate;
 	char pad270[ 0x10 ];
 	struct APlayerController* controller;
+	char pad288[ 0x20 ];
+	struct USkeletalMeshComponent* Mesh;
 };
 
 struct APlayerState 	// struct ASQPlayerState
@@ -614,7 +616,9 @@ struct APlayerState 	// struct ASQPlayerState
 
 struct ASQSoldier
 {
-	char pad000[ 0x710 ];
+	char pad000[ 0x6b8 ];
+	struct USkeletalMeshComponent* Mesh1PShadow;
+	char pad6c8[ 0x50 ];
 	struct USQSoldierMovement* SoldierMovement;
 	char pad760[ 0x1500 ];
 	float Health;
