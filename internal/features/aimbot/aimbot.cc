@@ -6,30 +6,30 @@
 
 bool c_aimbot::exec( UWorld* world )
 {
-auto level = world->level;
+    auto level = world->getLevel( );
     if ( !level ) return false;
-    
-    auto gameinstance = world->gameinstance;
+
+    auto gameinstance = world->getOwningGameInstance( );
     if ( !gameinstance ) return false;
 
-    auto localplayer = gameinstance->localplayer[ 0 ];
+    auto localplayer = gameinstance->getLocalPlayer( )[ 0 ];
     if ( !localplayer ) return false;
 
-    auto playercontroller = localplayer->playercontroller;
+    auto playercontroller = localplayer->getPlayerController( );
     if ( !playercontroller ) return false;
 
-    auto localpawn = playercontroller->acknowledgedpawn;
+    auto localpawn = playercontroller->getAcknowledgedPawn( );
     if ( !localpawn ) return false;
 
-    auto localmesh = localpawn->rootcomponent;
+    auto localmesh = localpawn->getMesh( );
     if ( !localmesh ) return false;
 
-    auto localplayerstate = localpawn->playerstate;
+    auto localplayerstate = localpawn->getPlayerState( );
     if ( !localplayerstate ) return false;
 
 
-    static float c_x = ( ImGui::GetIO().DisplaySize.x / 2.0f );
-    static float c_y = ( ImGui::GetIO().DisplaySize.y / 2.0f );
+    static float c_x = ( ImGui::GetIO( ).DisplaySize.x / 2.0f );
+    static float c_y = ( ImGui::GetIO( ).DisplaySize.y / 2.0f );
 
     auto get_len = [&]( Vector2 screen_pos )
     {
@@ -51,7 +51,7 @@ auto level = world->level;
         auto actor_name = sdk::get_object_name( actor );
         if ( vcruntime->wcsstr( actor_name, _( L"BP_Soldier_" ) ) )
         {
-            Vector3 head_pos = sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::HEAD );
+            Vector3 head_pos = sdk::get_bone_with_rotation( actor->getInstigator( )->getMesh( ), bones::HEAD );
             Vector2 screen_pos{};
 
             if ( sdk::world_to_screen( playercontroller, head_pos, &screen_pos ) )
@@ -71,9 +71,9 @@ auto level = world->level;
         return ret;
     };
 
-    auto actors = level->actors;
+    auto actors = level->getActors( );
 
-    for ( size_t i = 0; i < actors.Num(); i++ )
+    for ( size_t i = 0; i < actors.Num( ); i++ )
     {
         if ( !actors.IsValidIndex( i ) )
             continue;
@@ -86,20 +86,20 @@ auto level = world->level;
         {
             if ( const auto set = closest_actor( actor ); set != nullptr )
             {
-                if ( set->instigator != playercontroller->acknowledgedpawn )
+                if ( set->getInstigator( ) != playercontroller->getAcknowledgedPawn( ) )
                 {
-                    auto target_pos = sdk::get_bone_with_rotation( actor->instigator->controller->character->Mesh, bones::HEAD );
+                    auto target_pos = sdk::get_bone_with_rotation( actor->getInstigator( )->getMesh( ), bones::HEAD );
 
                     if ( vars::aimbot::draw_aimbone )
                     {
                         Vector2 screen_head{};
                         if ( sdk::world_to_screen( playercontroller, target_pos, &screen_head ) )
                         {
-                            ImGui::GetOverlayDrawList()->AddCircleFilled( { screen_head.x,screen_head.y }, 5.f, ImColor( 255, 0, 0 ), 30 );
+                            ImGui::GetOverlayDrawList( )->AddCircleFilled( { screen_head.x,screen_head.y }, 5.f, ImColor( 255, 0, 0 ), 30 );
                         }
                     }
 
-                    LookAt( localplayer->playercontroller, target_pos );
+                    LookAt( localplayer->getPlayerController( ), target_pos );
 
                 }
             }
@@ -109,8 +109,8 @@ auto level = world->level;
 
 void c_aimbot::LookAt( APlayerController* m_Player, Vector3 position )
 {
-    Vector3 loc_pos = sdk::get_bone_with_rotation( m_Player->character->Mesh, bones::HEAD );
-    Vector3 localRot = m_Player->ControlRotation;
+    Vector3 loc_pos = sdk::get_bone_with_rotation( m_Player->getAcknowledgedPawn( )->getMesh( ), bones::HEAD );
+    Vector3 localRot = m_Player->getControlRotation( );
 
     Vector3 relativePos = position - loc_pos;
 
@@ -119,5 +119,5 @@ void c_aimbot::LookAt( APlayerController* m_Player, Vector3 position )
 
     auto sets = localRot + angDelta / vars::aimbot::smooth;
 
-    m_Player->ControlRotation = Clamp( sets );
+    m_Player->getControlRotation( ) = Clamp( sets );
 }

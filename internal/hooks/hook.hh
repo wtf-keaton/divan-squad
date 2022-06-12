@@ -30,9 +30,6 @@ namespace hooks {
     inline void init( ) {
         auto m_pswap_chain = GetDynamicRHI( )->GetSwapChain( );
 
-        char buf[ 1024 ];
-
-
         o_present = *( decltype( o_present )* ) ( *( uintptr_t* ) m_pswap_chain + 64 );
         o_resize = *( decltype( o_resize )* ) ( *( uintptr_t* ) m_pswap_chain + 104 );
 

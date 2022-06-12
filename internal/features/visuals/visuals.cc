@@ -14,45 +14,45 @@ bool init_once = true;
 bool c_visuals::draw( UWorld* world )
 {
 
-    auto level = world->level;
+    auto level = world->getLevel( );
     if ( !level ) return false;
 
-    auto gameinstance = world->gameinstance;
+    auto gameinstance = world->getOwningGameInstance( );
     if ( !gameinstance ) return false;
 
-    auto localplayer = gameinstance->localplayer[ 0 ];
+    auto localplayer = gameinstance->getLocalPlayer( )[ 0 ];
     if ( !localplayer ) return false;
 
-    auto playercontroller = localplayer->playercontroller;
+    auto playercontroller = localplayer->getPlayerController( );
     if ( !playercontroller ) return false;
 
-    auto localpawn = playercontroller->acknowledgedpawn;
+    auto localpawn = playercontroller->getAcknowledgedPawn( );
     if ( !localpawn ) return false;
 
-    auto localmesh = localpawn->rootcomponent;
+    auto localmesh = localpawn->getRootComponent( );
     if ( !localmesh ) return false;
 
-    auto localplayerstate = localpawn->playerstate;
+    auto localplayerstate = localpawn->getPlayerState( );
     if ( !localplayerstate ) return false;
 
-    auto localsoldier = localplayerstate->Soldier;
+    auto localsoldier = localplayerstate->getSoldier( );
     if ( !localsoldier ) return false;
 
-    auto localpos = localmesh->RelativeLocation;
+    auto localpos = localmesh->getRelativeLocation( );
 
 
-    auto actors = level->actors;
+    auto actors = level->getActors( );
 
-    for ( int i = 0; i < actors.Num(); i++ )
+    for ( int i = 0; i < actors.Num( ); i++ )
     {
         if ( !actors.IsValidIndex( i ) ) continue;
 
         if ( auto actor = actors[ i ] )
         {
-            auto rootcomponent = actor->rootcomponent;
+            auto rootcomponent = actor->getRootComponent( );
             if ( rootcomponent )
             {
-                auto location = rootcomponent->RelativeLocation;
+                auto location = rootcomponent->getRelativeLocation( );
                 auto distance_float = vcruntime->get_distance( localpos, location );
 
                 int distance = int( distance_float ) / 100;
@@ -61,7 +61,9 @@ bool c_visuals::draw( UWorld* world )
 
                 if ( vars::visuals::players::enable )
                 {
-                    if ( actor->instigator == playercontroller->acknowledgedpawn ) continue;
+                    if ( actor->getInstigator( ) == playercontroller->getAcknowledgedPawn( ) ) continue;
+
+
                     if ( distance < vars::visuals::players::distance )
                     {
                         Vector2 screen_head{}, screen_root{};
@@ -73,23 +75,21 @@ bool c_visuals::draw( UWorld* world )
                             || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_GB_" ) )
                             || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_INS_" ) )
                             || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_MEA_" ) )
-                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_MIL_" ) )
-
-                            )
+                            || vcruntime->wcsstr( actor_name, _( L"BP_Soldier_MIL_" ) ) )
                         {
-                            auto actor_pawn = actor->instigator;
+                            auto actor_pawn = actor->getInstigator( );
                             if ( !actor_pawn ) continue;
 
-                            auto playerstate = actor_pawn->playerstate;
+                            auto playerstate = actor_pawn->getPlayerState( );
                             if ( !playerstate ) continue;
 
-                            auto soldier = playerstate->Soldier;
+                            auto soldier = playerstate->getSoldier( );
                             if ( !soldier ) continue;
 
-                            auto mesh = actor_pawn->Mesh;
+                            auto mesh = actor_pawn->getMesh( );
                             if ( !mesh ) continue;
 
-                            if ( vars::visuals::players::disable_team && playerstate->teamId == localplayerstate->teamId ) continue;
+                            if ( vars::visuals::players::disable_team && playerstate->getTeamID( ) == localplayerstate->getTeamID( ) ) continue;
 
                             auto head = sdk::get_bone_with_rotation( mesh, bones::HEAD );
                             auto root = sdk::get_bone_with_rotation( mesh, bones::ROOT );
@@ -103,13 +103,17 @@ bool c_visuals::draw( UWorld* world )
                                 box_size.x = box_size.x * 2.0f;
                                 Vector2 dist_pos{ box_size.x + 15.f, screen_head.y };
 
+                   
                                 if ( vars::visuals::players::names )
                                 {
+                                    char name[ 4096 ];
+                                    vcruntime->w2c( playerstate->getNickname( ).c_str( ), name, 2048 );
+
                                     char buf[ 1024 ];
-                                    ImFormatString( buf, sizeof buf, _( "%s HP: %d [%dm]" ), sdk::get_player_name( ( uint64_t ) actor ), soldier->Health, distance );
+                                    ImFormatString( buf, sizeof buf, _( "%s HP: %.0f [%dm]" ), name, soldier->getHealth( ), distance );
                                     auto size = font->CalcTextSizeA( 16.f, 14, 0, buf );
 
-                                    render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( start_pos.x + ( box_size.x / 2 ) - ( size.x ), start_pos.y - 10 - size.y ), ImGui::GetColorU32(
+                                    render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( start_pos.x + ( box_size.x / 2 ) - ( size.x ), start_pos.y - 10 - size.y ), ImGui::GetColorU32(
                                         ImVec4(
                                             vars::visuals::players::name_color[ 0 ],
                                             vars::visuals::players::name_color[ 1 ],
@@ -120,7 +124,7 @@ bool c_visuals::draw( UWorld* world )
 
                                 if ( vars::visuals::players::snapline )
                                 {
-                                    ImGui::GetOverlayDrawList()->AddLine( ImVec2( ImGui::GetIO().DisplaySize.x / 2, ImGui::GetIO().DisplaySize.y ), ImVec2( screen_root.x, screen_root.y ),
+                                    ImGui::GetOverlayDrawList( )->AddLine( ImVec2( ImGui::GetIO( ).DisplaySize.x / 2, ImGui::GetIO( ).DisplaySize.y ), ImVec2( screen_root.x, screen_root.y ),
                                         ImGui::GetColorU32(
                                             ImVec4(
                                                 vars::visuals::players::snapline_color[ 0 ],
@@ -132,7 +136,7 @@ bool c_visuals::draw( UWorld* world )
 
                                 if ( vars::visuals::players::box )
                                 {
-                                    render->render_box( ImGui::GetOverlayDrawList(), start_pos.x, start_pos.y, box_size.x, box_size.y,
+                                    render->render_box( ImGui::GetOverlayDrawList( ), start_pos.x, start_pos.y, box_size.x, box_size.y,
                                         ImGui::GetColorU32(
                                             ImVec4(
                                                 vars::visuals::players::box_color[ 0 ],
@@ -142,8 +146,8 @@ bool c_visuals::draw( UWorld* world )
 
                                     if ( vars::visuals::players::box_outline )
                                     {
-                                        render->render_box( ImGui::GetOverlayDrawList(), start_pos.x + 1, start_pos.y + 1, box_size.x - 2, box_size.y - 2, ImColor( 0, 0, 0 ), 1 );
-                                        render->render_box( ImGui::GetOverlayDrawList(), start_pos.x - 1, start_pos.y - 1, box_size.x + 2, box_size.y + 2, ImColor( 0, 0, 0 ), 1 );
+                                        render->render_box( ImGui::GetOverlayDrawList( ), start_pos.x + 1, start_pos.y + 1, box_size.x - 2, box_size.y - 2, ImColor( 0, 0, 0 ), 1 );
+                                        render->render_box( ImGui::GetOverlayDrawList( ), start_pos.x - 1, start_pos.y - 1, box_size.x + 2, box_size.y + 2, ImColor( 0, 0, 0 ), 1 );
                                     }
                                 }
                             }
@@ -178,41 +182,41 @@ bool c_visuals::draw( UWorld* world )
                                             int( vars::visuals::players::skelet_color[ 2 ] * 255.f )
                                         );// vars::visuals::players::skelet_color;
 
-                                    ImGui::GetOverlayDrawList()->AddLine( { screen_neck.x, screen_neck.y }, { screen_upper_arm_right.x, screen_upper_arm_right.y }, color, 1.f );
-                                    ImGui::GetOverlayDrawList()->AddLine( { screen_neck.x, screen_neck.y }, { screen_upper_arm_left.x, screen_upper_arm_left.y }, color, 1.f );
-                                    ImGui::GetOverlayDrawList()->AddLine( { screen_neck.x, screen_neck.y }, { screen_pelvis.x, screen_pelvis.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList( )->AddLine( { screen_neck.x, screen_neck.y }, { screen_upper_arm_right.x, screen_upper_arm_right.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList( )->AddLine( { screen_neck.x, screen_neck.y }, { screen_upper_arm_left.x, screen_upper_arm_left.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList( )->AddLine( { screen_neck.x, screen_neck.y }, { screen_pelvis.x, screen_pelvis.y }, color, 1.f );
 
-                                    ImGui::GetOverlayDrawList()->AddLine( { screen_pelvis.x, screen_pelvis.y }, { screen_right_thigh.x, screen_right_thigh.y }, color, 1.f );
-                                    ImGui::GetOverlayDrawList()->AddLine( { screen_pelvis.x, screen_pelvis.y }, { screen_left_thigh.x, screen_left_thigh.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList( )->AddLine( { screen_pelvis.x, screen_pelvis.y }, { screen_right_thigh.x, screen_right_thigh.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList( )->AddLine( { screen_pelvis.x, screen_pelvis.y }, { screen_left_thigh.x, screen_left_thigh.y }, color, 1.f );
 
-                                    ImGui::GetOverlayDrawList()->AddLine( { screen_right_thigh.x, screen_right_thigh.y }, { screen_right_calf.x, screen_right_calf.y }, color, 1.f );
-                                    ImGui::GetOverlayDrawList()->AddLine( { screen_left_thigh.x, screen_left_thigh.y }, { screen_left_calf.x, screen_left_calf.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList( )->AddLine( { screen_right_thigh.x, screen_right_thigh.y }, { screen_right_calf.x, screen_right_calf.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList( )->AddLine( { screen_left_thigh.x, screen_left_thigh.y }, { screen_left_calf.x, screen_left_calf.y }, color, 1.f );
 
-                                    ImGui::GetOverlayDrawList()->AddLine( { screen_right_calf.x, screen_right_calf.y }, { screen_right_foot.x, screen_right_foot.y }, color, 1.f );
-                                    ImGui::GetOverlayDrawList()->AddLine( { screen_left_calf.x, screen_left_calf.y }, { screen_left_foot.x, screen_left_foot.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList( )->AddLine( { screen_right_calf.x, screen_right_calf.y }, { screen_right_foot.x, screen_right_foot.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList( )->AddLine( { screen_left_calf.x, screen_left_calf.y }, { screen_left_foot.x, screen_left_foot.y }, color, 1.f );
 
-                                    ImGui::GetOverlayDrawList()->AddLine( { screen_upper_arm_right.x, screen_upper_arm_right.y }, { screen_lower_arm_right.x, screen_lower_arm_right.y }, color, 1.f );
-                                    ImGui::GetOverlayDrawList()->AddLine( { screen_upper_arm_left.x, screen_upper_arm_left.y }, { screen_lower_arm_left.x, screen_lower_arm_left.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList( )->AddLine( { screen_upper_arm_right.x, screen_upper_arm_right.y }, { screen_lower_arm_right.x, screen_lower_arm_right.y }, color, 1.f );
+                                    ImGui::GetOverlayDrawList( )->AddLine( { screen_upper_arm_left.x, screen_upper_arm_left.y }, { screen_lower_arm_left.x, screen_lower_arm_left.y }, color, 1.f );
                                 }
                             }
                         }
                     }
                 }
-                if ( vars::misc::debug )
-                {
-                    Vector2 screen_pos{};
-                    if ( sdk::world_to_screen( playercontroller, location, &screen_pos ) )
-                    {
-                        render->render_text( ImGui::GetOverlayDrawList(), vcruntime->w2c( actor_name ), ImVec2( screen_pos.x, screen_pos.y ),
-                            16.f, ImGui::GetColorU32(
-                                ImVec4(
-                                    vars::visuals::transport::kamaz_color[ 0 ],
-                                    vars::visuals::transport::kamaz_color[ 1 ],
-                                    vars::visuals::transport::kamaz_color[ 2 ],
-                                    1.f )
-                            ), false, font );
-                    }
-                }
+                //if ( vars::misc::debug )
+                //{
+                //    Vector2 screen_pos{};
+                //    if ( sdk::world_to_screen( playercontroller, location, &screen_pos ) )
+                //    {
+                //        render->render_text( ImGui::GetOverlayDrawList( ), vcruntime->w2c( actor_name ), ImVec2( screen_pos.x, screen_pos.y ),
+                //            16.f, ImGui::GetColorU32(
+                //                ImVec4(
+                //                    vars::visuals::transport::kamaz_color[ 0 ],
+                //                    vars::visuals::transport::kamaz_color[ 1 ],
+                //                    vars::visuals::transport::kamaz_color[ 2 ],
+                //                    1.f )
+                //            ), false, font );
+                //    }
+                //}
                 if ( vars::visuals::world::enable )
                 {
                     Vector2 screen_pos{};
@@ -220,7 +224,7 @@ bool c_visuals::draw( UWorld* world )
                     {
                         if ( distance < vars::visuals::world::distance )
                         {
-                            auto name = localplayerstate->teamId == 1 ? _( L"Team1SpawnerAmmoBox" ) : _( L"Team2SpawnerAmmoBox" );
+                            auto name = localplayerstate->getTeamID( ) == 1 ? _( L"Team1SpawnerAmmoBox" ) : _( L"Team2SpawnerAmmoBox" );
                             if ( vcruntime->wcsstr( actor_name, name ) )
                             {
                                 if ( sdk::world_to_screen( playercontroller, location, &screen_pos ) )
@@ -229,7 +233,7 @@ bool c_visuals::draw( UWorld* world )
                                     char buf[ 1024 ];
                                     ImFormatString( buf, sizeof buf, _( "Ammocrate [%im]" ), distance );
 
-                                    render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                    render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                         ImVec4(
                                             vars::visuals::world::ammocrate_color[ 0 ],
                                             vars::visuals::world::ammocrate_color[ 1 ],
@@ -254,7 +258,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "Kamaz [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::kamaz_color[ 0 ],
                                         vars::visuals::transport::kamaz_color[ 1 ],
@@ -273,7 +277,7 @@ bool c_visuals::draw( UWorld* world )
                                     char buf[ 1024 ];
                                     ImFormatString( buf, sizeof buf, _( "Minsk [%im]" ), distance );
 
-                                    render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                    render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                         ImVec4(
                                             vars::visuals::transport::minsk_color[ 0 ],
                                             vars::visuals::transport::minsk_color[ 1 ],
@@ -294,7 +298,7 @@ bool c_visuals::draw( UWorld* world )
                                     char buf[ 1024 ];
                                     ImFormatString( buf, sizeof buf, _( "Pickup Truck [%im]" ), distance );
 
-                                    render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                    render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                         ImVec4(
                                             vars::visuals::transport::tech_color[ 0 ],
                                             vars::visuals::transport::tech_color[ 1 ],
@@ -310,7 +314,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "Jeep [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::jeep_color[ 0 ],
                                         vars::visuals::transport::jeep_color[ 1 ],
@@ -326,7 +330,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "LUV-A1 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::luv_color[ 0 ],
                                         vars::visuals::transport::luv_color[ 1 ],
@@ -341,7 +345,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "M939 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::m939_color[ 0 ],
                                         vars::visuals::transport::m939_color[ 1 ],
@@ -356,7 +360,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "MAN [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::man_color[ 0 ],
                                         vars::visuals::transport::man_color[ 1 ],
@@ -371,7 +375,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "Ural 375D [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::ural375D_color[ 0 ],
                                         vars::visuals::transport::ural375D_color[ 1 ],
@@ -386,7 +390,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "Ural 4320 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::ural4320_color[ 0 ],
                                         vars::visuals::transport::ural4320_color[ 1 ],
@@ -403,7 +407,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "M-ATV [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::matv_color[ 0 ],
                                         vars::visuals::transport::matv_color[ 1 ],
@@ -420,7 +424,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "Tigr-M [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::tigrm_color[ 0 ],
                                         vars::visuals::transport::tigrm_color[ 1 ],
@@ -435,7 +439,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "TAPV [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::tapv_color[ 0 ],
                                         vars::visuals::transport::tapv_color[ 1 ],
@@ -452,7 +456,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "BRDM [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::brdm_color[ 0 ],
                                         vars::visuals::transport::brdm_color[ 1 ],
@@ -467,7 +471,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "Ocelot [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::lppv_color[ 0 ],
                                         vars::visuals::transport::lppv_color[ 1 ],
@@ -484,7 +488,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "BTR-80 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::btr80_color[ 0 ],
                                         vars::visuals::transport::btr80_color[ 1 ],
@@ -501,7 +505,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "BTR-82A [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::btr82a_color[ 0 ],
                                         vars::visuals::transport::btr82a_color[ 1 ],
@@ -516,7 +520,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "LAV 6 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::lav6_color[ 0 ],
                                         vars::visuals::transport::lav6_color[ 1 ],
@@ -531,7 +535,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "LAV 3 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::lav3_color[ 0 ],
                                         vars::visuals::transport::lav3_color[ 1 ],
@@ -546,7 +550,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "M113A3 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::m113a3_color[ 0 ],
                                         vars::visuals::transport::m113a3_color[ 1 ],
@@ -561,7 +565,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "M1126 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::m1126_color[ 0 ],
                                         vars::visuals::transport::m1126_color[ 1 ],
@@ -576,7 +580,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "FV432 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::fv432_color[ 0 ],
                                         vars::visuals::transport::fv432_color[ 1 ],
@@ -591,7 +595,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "FV107 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::fv107_color[ 0 ],
                                         vars::visuals::transport::fv107_color[ 1 ],
@@ -610,7 +614,7 @@ bool c_visuals::draw( UWorld* world )
                                     char buf[ 1024 ];
                                     ImFormatString( buf, sizeof buf, _( "MT-LB [%im]" ), distance );
 
-                                    render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                    render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                         ImVec4(
                                             vars::visuals::transport::mtlb_color[ 0 ],
                                             vars::visuals::transport::mtlb_color[ 1 ],
@@ -626,7 +630,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "BMP-1 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::bmp1_color[ 0 ],
                                         vars::visuals::transport::bmp1_color[ 1 ],
@@ -644,7 +648,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "BMP-2 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::bmp2_color[ 0 ],
                                         vars::visuals::transport::bmp2_color[ 1 ],
@@ -661,7 +665,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "M2A3 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::m2a3_color[ 0 ],
                                         vars::visuals::transport::m2a3_color[ 1 ],
@@ -678,7 +682,7 @@ bool c_visuals::draw( UWorld* world )
                                     char buf[ 1024 ];
                                     ImFormatString( buf, sizeof buf, _( "FV510 [%im]" ), distance );
 
-                                    render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                    render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                         ImVec4(
                                             vars::visuals::transport::fv510_color[ 0 ],
                                             vars::visuals::transport::fv510_color[ 1 ],
@@ -694,7 +698,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "FV4034 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::fv4034_color[ 0 ],
                                         vars::visuals::transport::fv4034_color[ 1 ],
@@ -709,7 +713,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "MSVS [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::msvs_color[ 0 ],
                                         vars::visuals::transport::msvs_color[ 1 ],
@@ -726,7 +730,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "M1A2 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::m1a2_color[ 0 ],
                                         vars::visuals::transport::m1a2_color[ 1 ],
@@ -743,7 +747,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "T-62 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::t62_color[ 0 ],
                                         vars::visuals::transport::t62_color[ 1 ],
@@ -762,7 +766,7 @@ bool c_visuals::draw( UWorld* world )
                                     char buf[ 1024 ];
                                     ImFormatString( buf, sizeof buf, _( "T-72 [%im]" ), distance );
 
-                                    render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                    render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                         ImVec4(
                                             vars::visuals::transport::t72b3_color[ 0 ],
                                             vars::visuals::transport::t72b3_color[ 1 ],
@@ -778,7 +782,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "Mi-8 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::mi8_color[ 0 ],
                                         vars::visuals::transport::mi8_color[ 1 ],
@@ -793,7 +797,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "Mi-17 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::mi17_color[ 0 ],
                                         vars::visuals::transport::mi17_color[ 1 ],
@@ -808,7 +812,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "UH-60M [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ), ImGui::GetColorU32(
                                     ImVec4(
                                         vars::visuals::transport::uh60_color[ 0 ],
                                         vars::visuals::transport::uh60_color[ 1 ],
@@ -823,7 +827,7 @@ bool c_visuals::draw( UWorld* world )
                                 char buf[ 1024 ];
                                 ImFormatString( buf, sizeof buf, _( "SA330 [%im]" ), distance );
 
-                                render->esp_draw( ImGui::GetOverlayDrawList(), ImVec2( screen_pos.x, screen_pos.y ),
+                                render->esp_draw( ImGui::GetOverlayDrawList( ), ImVec2( screen_pos.x, screen_pos.y ),
                                     ImGui::GetColorU32(
                                         ImVec4(
                                             vars::visuals::transport::sa330_color[ 0 ],

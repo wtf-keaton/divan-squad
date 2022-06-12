@@ -76,7 +76,7 @@ public:
     int wcsicmp( const wchar_t* a1, const wchar_t* a2 );
 
     int abs( int x );
-    const char* w2c( const wchar_t* label );
+    size_t w2c( const wchar_t* src, char* dest, size_t dest_len );
 
     double floor( double x );
     double ceil( double x );

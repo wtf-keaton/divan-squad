@@ -658,13 +658,31 @@ int c_vcruntime::abs( int x )
     return ( x ^ s ) - s;
 }
 
-const char* c_vcruntime::w2c( const wchar_t* label )
+size_t c_vcruntime::w2c( const wchar_t* src, char* dest, size_t dest_len )
 {
-    char data[ 256 ];
-    for ( auto i = 0; i < this->wcslen( label ); i++ )
-        data[ i ] = label[ i ];
+    size_t i;
+    wchar_t code;
 
-    return data;
+    i = 0;
+
+    while ( src[ i ] != '\0' && i < ( dest_len - 1 ) )
+    {
+        code = src[ i ];
+        if ( code < 128 )
+            dest[ i ] = char( code );
+        else
+        {
+            dest[ i ] = '?';
+            if ( code >= 0xD800 && code <= 0xD8FF )
+                i++;
+        }
+        i++;
+    }
+
+    dest[ i ] = '\0';
+
+    return i - 1;
+
 }
 
 double c_vcruntime::floor( double x )
