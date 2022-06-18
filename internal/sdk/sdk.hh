@@ -676,13 +676,13 @@ public:
 class APlayerController
 {
 public:
-    Vector3 getControlRotation( )
+    Vector3& getControlRotation( )
     {
-        if ( this == nullptr )
+       /* if ( this == nullptr )
         {
             debug_log( _( "Nullptr getted in function: %s \n" ), _( __FUNCTION__ ) );
-            return {};
-        }
+            return Vector3(0,0,0);
+        }*/
         return *( Vector3* ) ( this + offsets::playercontroller );
     }
     class APawn* getAcknowledgedPawn( )
