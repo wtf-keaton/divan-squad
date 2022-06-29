@@ -683,7 +683,7 @@ public:
             debug_log( _( "Nullptr getted in function: %s \n" ), _( __FUNCTION__ ) );
             return Vector3(0,0,0);
         }*/
-        return *( Vector3* ) ( this + offsets::playercontroller );
+        return *( Vector3* ) ( this + 0x2b0);
     }
     class APawn* getAcknowledgedPawn( )
     {
